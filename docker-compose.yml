@@ -31,3 +31,34 @@ services:
       - "5432:5432"
     volumes:
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+  
+  prodcuer:
+    build: ./producer
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+      KAFKA_TOPIC: "events"
+    restart: unless-stopped
+
+  consumer:
+    build: ./consumer
+    depends_on:
+      - kafka
+      - postgres
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+      KAFKA_TOPIC: "events"
+      KAFKA_GROUP_ID: "eventflow-consumers"
+      POSTGRES_DSN: "dbname=eventflow user=stream password=stream host=postgres port=5432"
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_DSN: "dbname=eventflow user=stream password=stream host=postgres port=5432"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
